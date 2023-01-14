@@ -1,6 +1,11 @@
 from cscore import CameraServer
 import cv2
 import numpy as np
+import pupil_apriltags
+
+#make apriltag detector
+detector = pupil_apriltags.Detector(families='tag36h11')
+
 
 width = 480
 height = 320
@@ -28,15 +33,19 @@ while True:
 
    if time == 0:
       # Send the output the error.
-      outputStream.notifyError(cvSink.getError());
+      outputStream.notifyError(cvSink.getError())
       # skip the rest of the current iteration
       continue
 
-   #
-   # Insert your image processing logic here!
-   #
+   img_2 = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-   
+   result : list[pupil_apriltags.Detection] = detector.detect(img = img_2)
+
+   for r in result:
+      img = cv2.line(img, tuple(map(int, r.corners[0])), tuple(map(int, r.corners[1])), (0,0,255), 5)
+      img = cv2.line(img, tuple(map(int, r.corners[1])), tuple(map(int, r.corners[2])), (0,0,255), 5)
+      img = cv2.line(img, tuple(map(int, r.corners[2])), tuple(map(int, r.corners[3])), (0,0,255), 5)
+      img = cv2.line(img, tuple(map(int, r.corners[3])), tuple(map(int, r.corners[0])), (0,0,255), 5)
 
    # (optional) send some image back to the dashboard
    outputStream.putFrame(img)
