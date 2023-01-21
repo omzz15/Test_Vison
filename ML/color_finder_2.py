@@ -3,7 +3,7 @@ import numpy as np
 import json
 from tkinter import *
 
-path = "C:\Development\Robotics\FRC\Test_Vision\ML\Cone_Data\cone.jpg" # f'{img_path}\{img_name}'
+path = r"C:/Development/Robotics/FRC/Test_Vision/ML/Annotated_Data/vid/frame_501.jpg" # f'{img_path}\{img_name}'
 
 def get_img():
     img = cv2.imread(path)
@@ -49,6 +49,19 @@ vHigh = Scale(root, from_=0, to=255, orient=HORIZONTAL, label="V High", length= 
 vHigh.pack()
 button = Button(root, text="Save", command=on_save)
 button.pack()
+
+#try to load json file
+try:
+    with open("C:\Development\Robotics\FRC\Test_Vision\ML\Cone_Data\color_data.json", "r") as f:
+        data = json.load(f)
+        hLow.set(data["HSV_low"][0])
+        sLow.set(data["HSV_low"][1])
+        vLow.set(data["HSV_low"][2])
+        hHigh.set(data["HSV_high"][0])
+        sHigh.set(data["HSV_high"][1])
+        vHigh.set(data["HSV_high"][2])
+except:
+    print("No previous data found. (This is normal if you are running this for the first time")
 
 cv2.imshow("image", get_img())
 

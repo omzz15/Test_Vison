@@ -2,6 +2,7 @@ import cv2
 import sys
 import json
 import os
+import utils
 
 create_data = True
 
@@ -10,12 +11,13 @@ video_name = "vid.mp4"
 
 data_out_path = "C:/Development/Robotics/FRC/Test_Vision/ML/Annotated_Data/"
 data_out_path += video_name.split(".")[0] + "/"
+data_out_json = data_out_path + "data.json"
 
 width = 540
 height = 960
 
+skip_frames_initial = 10
 skip_frames = 49
-
 
 video : cv2 = cv2.VideoCapture(video_path + video_name)
 
@@ -23,10 +25,8 @@ if not video.isOpened():
     print("Could not open video")
     sys.exit()
 
-# ok, frame = video.read()
-# if not ok:
-#     print('Cannot read video file')
-#     sys.exit()
+for i in range(skip_frames_initial):
+    video.read()
 
 # save the frame
 # cv2.imwrite('C:/Development/Robotics/FRC/Test_Vision/ML/Cone_Data/Videos/vid.jpg', frame)
@@ -42,8 +42,19 @@ def prosessFrame(frame):
     contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     return frame, contours, mask
 
-if create_data and not os.path.exists(data_out_path):
-    os.mkdir(data_out_path)
+if create_data:
+    if not os.path.exists(data_out_path):
+        os.mkdir(data_out_path)
+    app_data = {
+        "video_path": video_path,
+        "video_name": video_name,
+        width: width,
+        height: height,
+        "objects" : {1 : "cone"},
+        "initial_frame": skip_frames_initial + 1,
+        "skip_frames": skip_frames
+    }
+    utils.update_app_data(data_out_json, app_data)
 
 while True:
     ok, frame = video.read()
@@ -56,19 +67,19 @@ while True:
     x,y,w,h = cv2.boundingRect(largest_contours)
 
     if create_data:
+        current_frame = int(video.get(cv2.CAP_PROP_POS_FRAMES))
         # save the frame
-        name = f"frame_{int(video.get(cv2.CAP_PROP_POS_FRAMES))}"
+        name = f"frame_{current_frame}"
         cv2.imwrite(data_out_path + name + ".jpg", frame)
-        center_x = x + w/2
-        center_y = y + h/2
 
-        scaled_center_x = center_x / width
-        scaled_center_y = center_y / height
-        scaled_w = w / width
-        scaled_h = h / height
+        # transfrom data
+        x2,y2,w2,h2 = utils.normalize(utils.edge_with_size_to_center((x,y,w,h)), width, height)
 
         with open(data_out_path + name + ".txt", "w") as f:
-            f.write(f"1 {scaled_center_x} {scaled_center_y} {scaled_w} {scaled_h}")
+            f.write(f"1 {x2} {y2} {w2} {h2}")
+    
+        data = {"last_frame": current_frame}
+        utils.update_app_data(data_out_json, data)
 
     frame = cv2.drawContours(frame, [largest_contours], -1, (0, 255, 0), 3)
     frame = cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 1)
@@ -76,7 +87,7 @@ while True:
     cv2.imshow('image',frame)
     cv2.imshow('mask',mask)
 
-    c = cv2.waitKey(50)
+    c = cv2.waitKey(1)
     if c == 27:
         break
 
@@ -85,6 +96,8 @@ while True:
         ok, _ = video.read()
         if not ok:
             break
+    
+    
 
 video.release()
 cv2.destroyAllWindows()
